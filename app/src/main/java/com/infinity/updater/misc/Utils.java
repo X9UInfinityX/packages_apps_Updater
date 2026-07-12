@@ -391,6 +391,10 @@ public class Utils {
         return new File(Constants.UPDATE_RECOVERY_EXEC).exists();
     }
 
+    public static boolean isKeepCurrentAblExecPresent() {
+        return isABDevice();
+    }
+
     public static String getDisplayVersion(String version) {
         float floatVersion = 0;
         try {
