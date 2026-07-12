@@ -19,6 +19,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.UpdateEngine;
 import android.os.UpdateEngineCallback;
+import android.os.SystemProperties;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -206,6 +207,12 @@ class ABUpdateInstaller {
                 return;
             }
         }
+
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(mContext);
+        boolean keepCurrentAbl = preferences.getBoolean(Constants.PREF_KEEP_CURRENT_ABL, false)
+                && Utils.isKeepCurrentAblExecPresent();
+        SystemProperties.set(Constants.KEEP_CURRENT_ABL_PROPERTY,
+                Boolean.toString(keepCurrentAbl));
 
         boolean enableABPerfMode = PreferenceManager.getDefaultSharedPreferences(mContext)
                 .getBoolean(Constants.PREF_AB_PERF_MODE, true);

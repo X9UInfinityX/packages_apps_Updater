@@ -32,6 +32,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.os.SystemProperties;
 import android.util.Log;
 import android.util.TypedValue;
@@ -529,11 +530,10 @@ public class UpdatesActivity extends UpdatesListActivity implements UpdateImport
     */
 
     private void handleDownloadStatusChange(String downloadId) {
-        if (Update.LOCAL_ID.equals(downloadId)) {
+        UpdateInfo update = mUpdaterService.getUpdaterController().getUpdate(downloadId);
+        if (update == null) {
             return;
         }
-
-        UpdateInfo update = mUpdaterService.getUpdaterController().getUpdate(downloadId);
         switch (update.getStatus()) {
             case PAUSED_ERROR:
                 showSnackbar(R.string.snack_download_failed, Snackbar.LENGTH_LONG);
@@ -544,7 +544,13 @@ public class UpdatesActivity extends UpdatesListActivity implements UpdateImport
             case VERIFIED:
                 showSnackbar(R.string.snack_download_verified, Snackbar.LENGTH_LONG);
                 break;
+            case INSTALLED:
+                break;
         }
+    }
+
+    public void requestReboot() {
+        getSystemService(PowerManager.class).reboot(null);
     }
 
     @Override
@@ -616,10 +622,14 @@ public class UpdatesActivity extends UpdatesListActivity implements UpdateImport
         SwitchCompat meteredNetworkWarning = view.findViewById(
                 R.id.preferences_metered_network_warning);
         SwitchCompat abPerfMode = view.findViewById(R.id.preferences_ab_perf_mode);
+        SwitchCompat keepCurrentAbl = view.findViewById(R.id.preferences_keep_current_abl);
         SwitchCompat updateRecovery = view.findViewById(R.id.preferences_update_recovery);
 
         if (!Utils.isABDevice()) {
             abPerfMode.setVisibility(View.GONE);
+            keepCurrentAbl.setVisibility(View.GONE);
+        } else if (!Utils.isKeepCurrentAblExecPresent()) {
+            keepCurrentAbl.setEnabled(false);
         }
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
@@ -628,6 +638,7 @@ public class UpdatesActivity extends UpdatesListActivity implements UpdateImport
         meteredNetworkWarning.setChecked(prefs.getBoolean(Constants.PREF_METERED_NETWORK_WARNING,
                 prefs.getBoolean(Constants.PREF_MOBILE_DATA_WARNING, false)));
         abPerfMode.setChecked(prefs.getBoolean(Constants.PREF_AB_PERF_MODE, true));
+        keepCurrentAbl.setChecked(prefs.getBoolean(Constants.PREF_KEEP_CURRENT_ABL, false));
 
         if (getResources().getBoolean(R.bool.config_hideRecoveryUpdate)) {
             // Hide the update feature if explicitly requested.
@@ -668,6 +679,8 @@ public class UpdatesActivity extends UpdatesListActivity implements UpdateImport
                             .putBoolean(Constants.PREF_METERED_NETWORK_WARNING,
                                     meteredNetworkWarning.isChecked())
                             .putBoolean(Constants.PREF_AB_PERF_MODE, abPerfMode.isChecked())
+                            .putBoolean(Constants.PREF_KEEP_CURRENT_ABL,
+                                    keepCurrentAbl.isEnabled() && keepCurrentAbl.isChecked())
                             .apply();
 
                     if (Utils.isUpdateCheckEnabled(this)) {
